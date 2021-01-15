@@ -1,0 +1,4 @@
+---
+
+kibana_packages:           [ kibana ]
+kibana_metricbeat_modules: kubernetes

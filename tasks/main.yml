@@ -1,0 +1,38 @@
+---
+
+- name: add repo
+  template:
+    src: 'elasticsearch.repo.j2'
+    dest: '/etc/yum.repos.d/elasticsearch-{{ kibana_es_major_version }}.repo'
+  when: ansible_os_family == 'RedHat'
+
+- name: install
+  package:
+    name: '{{ kibana_packages }}'
+  when: kibana_install | bool
+
+- name: config
+  lineinfile:
+    path: /etc/kibana/kibana.yml
+    regexp: '{{ item.regexp }}'
+    line: '{{ item.line }}'
+  loop:
+    - { regexp: 'server.host:',       line: 'server.host: 0.0.0.0' }
+    - { regexp: 'server.port:',       line: 'server.port: {{ kibana_server_port }}' }
+    - { regexp: 'elasticsearch.url:', line: 'elasticsearch.hosts: [ {% for host in play_hosts %}"http://{{ host }}.{{ domain }}:{{ kibana_es_port }}"{% if not loop.last %}, {% endif %}{% endfor %} ]' }
+  register: kibana_config
+
+- name: enable and start kibana
+  service:
+    name: kibana
+    state: '{% if kibana_config.changed %}restarted{% else %}started{% endif %}'
+    enabled: true
+
+#- name: enable metricbeat modules
+#  shell: metricbeat modules enable {{ elc_metricbeat_modules }} && metricbeat setup
+#
+#- name: enable and start metricbeat
+#  service:
+#    name: metricbeat
+#    state: started
+#    enabled: true
